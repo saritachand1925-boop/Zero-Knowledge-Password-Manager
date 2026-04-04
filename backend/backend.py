@@ -11,10 +11,10 @@ SECRET_KEY = "supersecretjwtkey"
 # ------------------ DB CONNECTION ------------------
 def get_db():
     return mysql.connector.connect(
-        host="switchyard.proxy.rlwy.net",
-        port=51013,
+        host="localhost",
+        port=3306,
         user="root",
-        password="PSYCbLbIcbFldPKnlYOFJhJPoBTxJFPt",
+        password="puja2059",
         database="ciphersphere"
     )
 
