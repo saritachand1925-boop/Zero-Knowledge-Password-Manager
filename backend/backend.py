@@ -35,7 +35,8 @@ def encrypt_password(key, plaintext):
 
 def decrypt_password(key, enc_data):
     raw = base64.b64decode(enc_data)
-    nonce, tag, ciphertext = raw[:16], raw[16:32], raw[32:]
+    nonce, tag, ciphertext = raw[:16], raw[
+        16:32], raw[32:]
     cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
     return cipher.decrypt_and_verify(ciphertext, tag).decode()
 
