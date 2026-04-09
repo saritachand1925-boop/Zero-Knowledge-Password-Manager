@@ -4,18 +4,21 @@ from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF2
 from email.mime.text import MIMEText
 import mysql.connector
+from dotenv import load_dotenv
+import os
 
 app = Flask(__name__)
 SECRET_KEY = "supersecretjwtkey"
 
 # ------------------ DB CONNECTION ------------------
+load_dotenv()
+
 def get_db():
     return mysql.connector.connect(
-        host="switchyard.proxy.rlwy.net",
-        port=51013,
-        user="root",
-        password="PSYCbLbIcbFldPKnlYOFJhJPoBTxJFPt",
-        database="ciphersphere"
+        host=os.getenv("DB_HOST"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        database=os.getenv("DB_NAME")
     )
 
 # ------------------ TEMP STORAGE ------------------
