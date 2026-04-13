@@ -127,14 +127,17 @@ def login():
 @app.route('/vault', methods=['POST'])
 def add_entry():
     data = request.get_json()
-    token =  request.headers.get("Authorization")
+    token = request.headers.get("Authorization")
+
+    if not token or not token.startswith("Bearer "):
+        return jsonify({"error": "Invalid token"}), 401
+
+    token = token.split(" ")[1]
+
     masterPassword = data.get("masterPassword")
     site = data.get("site")
     username = data.get("username")
     password = data.get("password")
-
-    if not token:
-        return jsonify({"error": "Missing token"}), 401
 
     try:
         decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
@@ -142,69 +145,32 @@ def add_entry():
 
         conn = get_db()
         cur = conn.cursor(dictionary=True)
-        cur.execute("SELECT salt FROM users WHERE email=%s", (email,))
+
+        cur.execute("SELECT id, salt FROM users WHERE email=%s", (email,))
         user = cur.fetchone()
+
         if not user:
             conn.close()
-            return jsonify({"error": "User not found"}), 400
+            return jsonify({"error": "User not found"}), 404
+
+        user_id = user["id"]
 
         key = derive_key(masterPassword, user["salt"])
         encrypted = encrypt_password(key, password)
 
-        cur.execute("INSERT INTO vaults (email, site, username, encrypted_password) VALUES (%s, %s, %s, %s)",
-                    (email, site, username, encrypted))
+        cur.execute(
+            "INSERT INTO vaults (user_id, site, username, encrypted_password) VALUES (%s,%s,%s,%s)",
+            (user_id, site, username, encrypted)
+        )
+
         conn.commit()
         conn.close()
 
         return jsonify({"message": "Entry saved securely"}), 200
 
     except Exception as e:
+        print("ERROR:", e)
         return jsonify({"error": str(e)}), 401
-
-# ------------------ VAULT GET ------------------
-@app.route('/vault', methods=['GET'])
-def get_entries():
-    token = request.headers.get("Authorization") 
-    masterPassword = request.args.get("masterPassword")
-
-    if not token:
-        return jsonify({"error": "Missing token"}), 401
-
-    try:
-        decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        email = decoded['email']
-
-        conn = get_db()
-        cur = conn.cursor(dictionary=True)
-        cur.execute("SELECT salt FROM users WHERE email=%s", (email,))
-        user = cur.fetchone()
-        if not user:
-            conn.close()
-            return jsonify({"error": "User not found"}), 400
-
-        key = derive_key(masterPassword, user["salt"])
-
-        cur.execute("SELECT site, username, encrypted_password FROM vaults WHERE email=%s", (email,))
-        rows = cur.fetchall()
-        conn.close()
-
-        result = []
-        for entry in rows:
-            try:
-                decrypted = decrypt_password(key, entry["encrypted_password"])
-            except ValueError:
-                return jsonify({"error": "Incorrect master password"}), 400
-            result.append({
-                "site": entry["site"],
-                "username": entry["username"],
-                "password": decrypted
-            })
-
-        return jsonify({"vault": result}), 200
-
-    except Exception:
-        return jsonify({"error": "Unauthorized"}), 401
-
 # ------------------ MAIN ------------------
 if __name__ == '__main__':
     app.run(debug=True)
