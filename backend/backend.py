@@ -124,7 +124,7 @@ def login():
     return jsonify({"token": token})
 
 # ------------------ VAULT ADD ------------------
-@app.route('/vault', methods=['GET'])
+@app.route('/vault', methods=['GET','POST'])
 def get_vault():
     token = request.headers.get("Authorization")
     masterPassword = request.args.get("masterPassword")
